@@ -19,13 +19,18 @@ use filemap::Character;
 // }
 
 use sdl2::pixels::PixelFormatEnum;
-use sdl2::rect::Point;
 use sdl2::rect::Rect;
 use sdl2::event::Event;
 use sdl2::pixels::Color;
 use sdl2::keyboard::Keycode;
+use sdl2::render::Texture;
 
-fn render_with_sdl(map: &FileMap) {
+struct DisplayObject {
+    texture: Texture,
+    rect: Rect
+}
+
+fn render_with_sdl(maps: &Vec<FileMap>) {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem.window("maximap", 500, 500)
@@ -35,14 +40,14 @@ fn render_with_sdl(map: &FileMap) {
         .unwrap();
 
     let mut renderer = window.renderer().present_vsync().build().unwrap();
-
     renderer.set_draw_color(Color::RGB(255, 255, 255));
 
-    let mut texture =
-        renderer.create_texture_streaming(PixelFormatEnum::RGB24, map.width, map.height)
-            .unwrap();
-
-    texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
+    let mut x_offset = 0;
+    let display_objs = maps.iter().map(|map| {
+        let mut texture =
+            renderer.create_texture_streaming(PixelFormatEnum::RGB24, map.width, map.height)
+                .unwrap();
+        texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
             for y in 0..map.height {
                 for x in 0..map.width {
                     let offset = y as usize * pitch + x as usize * 3;
@@ -54,17 +59,28 @@ fn render_with_sdl(map: &FileMap) {
             for (y, line) in map.lines.iter().enumerate() {
                 for (x, character) in line.characters.iter().enumerate() {
                     let offset = y as usize * pitch + x as usize * 3;
-                    let value = match character {
-                        &Character::Whitespace => 255,
-                        &Character::Normal => 64,
-                    };
-                    buffer[offset + 0] = value;
-                    buffer[offset + 1] = value;
-                    buffer[offset + 2] = value;
+                    match character {
+                        &Character::Whitespace => { },
+                        &Character::Normal => {
+                            buffer[offset + 0] = 64;
+                            buffer[offset + 1] = 64;
+                            buffer[offset + 2] = 64;
+                        }
+                    }
                 }
             }
         })
         .unwrap();
+
+        let rect = Rect::new(x_offset as i32, 0, map.width, map.height);
+
+        x_offset += map.width + 10;
+
+        DisplayObject {
+            texture: texture,
+            rect: rect
+        }
+    }).collect::<Vec<_>>();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
@@ -78,17 +94,9 @@ fn render_with_sdl(map: &FileMap) {
         }
         {
             renderer.clear();
-            let mut rect = Rect::new(0, 0, map.width, map.height);
-
-            if let Some(window) = renderer.window() {
-                let size = window.drawable_size();
-                let win_width = size.0 as i32;
-                let win_height = size.1 as i32;
-                let center = Point::new(win_width, win_height) / 2;
-                rect = Rect::from_center(center, map.width, map.height);
+            for obj in &display_objs {
+                renderer.copy(&obj.texture, None, Some(obj.rect));
             }
-
-            renderer.copy(&texture, None, Some(rect));
             renderer.present();
         }
     }
@@ -98,15 +106,9 @@ fn main() {
     let file_maps: Vec<FileMap> = env::args()
         .skip(1)
         .filter_map(|path| FileMap::from_path(&path))
-        .collect::<Vec<_>>();
+        .collect::<Vec<FileMap>>();
 
-    for map in file_maps {
-        println!("{} has a max line width of {}", map.filename, map.width);
+    if !file_maps.is_empty() {
+        render_with_sdl(&file_maps);
     }
-
-    // if let Ok(map) = FileMap::from_path(&path_string) {
-    //     // println!("{}", map);
-    //     // print_file_map(&map);
-    //     render_with_sdl(&map);
-    // }
 }
