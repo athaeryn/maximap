@@ -95,14 +95,18 @@ fn render_with_sdl(map: &FileMap) {
 }
 
 fn main() {
-    let path_string = match env::args().nth(1) {
-        Some(arg) => arg,
-        None => panic!("USAGE: maximap FILENAME"),
-    };
+    let file_maps: Vec<FileMap> = env::args()
+        .skip(1)
+        .filter_map(|path| FileMap::from_path(&path))
+        .collect::<Vec<_>>();
 
-    if let Ok(map) = FileMap::from_path(&path_string) {
-        // println!("{}", map);
-        // print_file_map(&map);
-        render_with_sdl(&map);
+    for map in file_maps {
+        println!("{} has a max line width of {}", map.filename, map.width);
     }
+
+    // if let Ok(map) = FileMap::from_path(&path_string) {
+    //     // println!("{}", map);
+    //     // print_file_map(&map);
+    //     render_with_sdl(&map);
+    // }
 }

@@ -1,4 +1,5 @@
 use std::cmp;
+use std::fmt;
 use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
@@ -47,7 +48,7 @@ pub struct FileMap {
 }
 
 impl FileMap {
-    pub fn from_path(path_string: &str) -> Result<FileMap, &str> {
+    pub fn from_path(path_string: &str) -> Option<FileMap> {
         let path = Path::new(&path_string);
         let display = path.display();
 
@@ -65,22 +66,16 @@ impl FileMap {
             .map(|string| Line::from_string(string))
             .collect::<Vec<Line>>();
 
-        let width = lines.iter()
-            .fold(0, |max, line| cmp::max(line.width, max));
-
-        // TODO: why is the `- 1` necessary?
-        let height = (lines.len() as u32) - 1;
-
-        Ok(FileMap {
-            lines: lines,
-            height: height,
-            width: width,
+        Some(FileMap {
+            // TODO: why is the `- 1` necessary?
+            height: (lines.len() as u32) - 1,
+            width: lines.iter().fold(0, |max, line| cmp::max(line.width, max)),
             filename: path_string.to_string(),
+            lines: lines,
         })
     }
 }
 
-use std::fmt;
 impl fmt::Display for FileMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}:<{},{}>", self.filename, self.width, self.height)
