@@ -6,7 +6,7 @@ use std::path::Path;
 
 pub enum Character {
     Whitespace,
-    Normal
+    Normal,
 }
 
 impl Character {
@@ -21,13 +21,12 @@ impl Character {
 
 pub struct Line {
     pub characters: Vec<Character>,
-    width: u32
+    width: u32,
 }
 
 impl Line {
-    fn from_string (string: &str) -> Line {
-        let characters: Vec<Character> = string
-            .chars()
+    fn from_string(string: &str) -> Line {
+        let characters: Vec<Character> = string.chars()
             .map(Character::from_char)
             .collect();
 
@@ -35,7 +34,7 @@ impl Line {
 
         Line {
             characters: characters,
-            width: width
+            width: width,
         }
     }
 }
@@ -44,7 +43,7 @@ pub struct FileMap {
     pub lines: Vec<Line>,
     pub height: u32,
     pub width: u32,
-    pub filename: String
+    pub filename: String,
 }
 
 impl FileMap {
@@ -53,9 +52,8 @@ impl FileMap {
         let display = path.display();
 
         let mut file = match File::open(&path) {
-            Err(why) => panic!("couldn't open {}: {}", display,
-                                                    why.description()),
-            Ok(file) => file
+            Err(why) => panic!("couldn't open {}: {}", display, why.description()),
+            Ok(file) => file,
         };
 
         let mut contents = String::new();
@@ -63,13 +61,11 @@ impl FileMap {
         // TODO: better error handling
         file.read_to_string(&mut contents).unwrap();
 
-        let lines = contents
-            .split("\n")
+        let lines = contents.split("\n")
             .map(|string| Line::from_string(string))
             .collect::<Vec<Line>>();
 
-        let width = lines
-            .iter()
+        let width = lines.iter()
             .fold(0, |max, line| cmp::max(line.width, max));
 
         // TODO: why is the `- 1` necessary?
@@ -79,7 +75,7 @@ impl FileMap {
             lines: lines,
             height: height,
             width: width,
-            filename: path_string.to_string()
+            filename: path_string.to_string(),
         })
     }
 }
